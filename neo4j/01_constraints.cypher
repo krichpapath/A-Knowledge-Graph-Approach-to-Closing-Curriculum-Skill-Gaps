@@ -1,0 +1,5 @@
+CREATE CONSTRAINT job_id_unique IF NOT EXISTS
+FOR (j:Job) REQUIRE j.job_id IS UNIQUE;
+
+CREATE CONSTRAINT course_id_unique IF NOT EXISTS
+FOR (c:Course) REQUIRE c.course_id IS UNIQUE;

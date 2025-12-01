@@ -1,0 +1,6 @@
+pandas
+openpyxl
+neo4j
+sentence-transformers
+python-dotenv
+FlagEmbedding
