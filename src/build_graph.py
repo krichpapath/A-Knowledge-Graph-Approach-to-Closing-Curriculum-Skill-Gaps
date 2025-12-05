@@ -2,7 +2,7 @@
 
 from src.data_loader import load_all
 from src.embed_bge import embed_texts
-from src.neo4j_client import get_driver
+from src.neo4j_client import get_session
 from src.graph_setup import setup_schema
 
 CREATE_JOB = """
@@ -32,8 +32,7 @@ def main():
     course_embeddings = embed_texts(courses_df["clean_text"].tolist())
 
     # 4) Insert into Neo4j
-    driver = get_driver()
-    with driver.session() as session:
+    with get_session() as session:
         # Jobs
         for (idx, row), emb in zip(jobs_df.iterrows(), job_embeddings):
             session.run(

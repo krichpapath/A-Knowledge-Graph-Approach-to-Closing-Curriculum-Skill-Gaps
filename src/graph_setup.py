@@ -1,6 +1,6 @@
 # File: src/graph_setup.py
 
-from src.neo4j_client import get_driver
+from src.neo4j_client import get_session
 from src.config import EMBEDDING_DIM
 
 CONSTRAINTS_CYPHER = [
@@ -61,8 +61,7 @@ VECTOR_INDEXES_CYPHER = [
 ]
 
 def setup_schema():
-    driver = get_driver()
-    with driver.session() as session:
+    with get_session() as session:
         for q in CONSTRAINTS_CYPHER:
             session.run(q)
         for q in VECTOR_INDEXES_CYPHER:

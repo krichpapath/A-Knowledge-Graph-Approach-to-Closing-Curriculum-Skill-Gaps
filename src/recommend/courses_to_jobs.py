@@ -1,7 +1,7 @@
 # File: src/recommend/courses_to_jobs.py
 
 from typing import List, Dict
-from src.neo4j_client import get_driver
+from src.neo4j_client import get_session
 from src.recommend.skills_to_jobs import find_jobs_for_skills
 
 
@@ -24,8 +24,7 @@ def get_skills_for_courses(selected_course_ids: List[str]) -> List[str]:
     RETURN DISTINCT s.name AS name
     ORDER BY name
     """
-    driver = get_driver()
-    with driver.session() as session:
+    with get_session() as session:
         rows = session.run(query, {"course_ids": selected_course_ids}).data()
 
     skills = [r["name"] for r in rows if r["name"]]

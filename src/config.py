@@ -19,3 +19,6 @@ RERANKER_MODEL_NAME = "BAAI/bge-reranker-v2-m3"
 NEO4J_URI = os.getenv("NEO4J_URI")
 NEO4J_USER = os.getenv("NEO4J_USER")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
+
+# 🔹 New: target database / graph name
+NEO4J_GRAPH_NAME = os.getenv("NEO4J_GRAPH_NAME", "neo4j") 

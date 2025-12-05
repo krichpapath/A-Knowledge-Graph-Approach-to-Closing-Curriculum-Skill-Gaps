@@ -6,7 +6,7 @@ from src.recommend.job_to_courses import (
     recommend_courses_hybrid,
     get_job_skill_coverage,
 )
-from src.neo4j_client import get_driver
+from src.neo4j_client import get_session
 
 
 def _get_any_job_code() -> str:
@@ -14,8 +14,7 @@ def _get_any_job_code() -> str:
     Helper: pick one job_code from the DB if none is supplied.
     """
     query = "MATCH (j:Job) RETURN j.job_code AS job_code LIMIT 1"
-    driver = get_driver()
-    with driver.session() as session:
+    with get_session() as session:
         rec = session.run(query).single()
     return rec["job_code"] if rec else None
 

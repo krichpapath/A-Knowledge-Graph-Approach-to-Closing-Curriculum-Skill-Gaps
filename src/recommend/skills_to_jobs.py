@@ -1,7 +1,7 @@
 # File: src/recommend/skills_to_jobs.py
 
 from typing import List, Dict
-from src.neo4j_client import get_driver
+from src.neo4j_client import get_session
 
 
 def find_jobs_for_skills(selected_skills: List[str], top_n: int = 10) -> List[Dict]:
@@ -88,8 +88,7 @@ def find_jobs_for_skills(selected_skills: List[str], top_n: int = 10) -> List[Di
     LIMIT $top_n
     """
 
-    driver = get_driver()
-    with driver.session() as session:
+    with get_session() as session:
         rows = session.run(
             query,
             {"selected_skills": selected_skills, "top_n": top_n}

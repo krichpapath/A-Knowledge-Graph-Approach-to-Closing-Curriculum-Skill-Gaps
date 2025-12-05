@@ -1,7 +1,7 @@
 # File: src/recommend/job_to_courses.py
 
 from typing import List, Dict
-from src.neo4j_client import get_driver
+from src.neo4j_client import get_session
 from src.rerank.bge_reranker import rerank_job_skills  # we will reuse reranker for job-course pairs in a moment
 
 
@@ -16,8 +16,7 @@ def _get_job_text(job_code: str) -> str:
            j.description_en AS description_en,
            j.tasks          AS tasks
     """
-    driver = get_driver()
-    with driver.session() as session:
+    with get_session() as session:
         rec = session.run(query, {"job_code": job_code}).single()
 
     if not rec:
@@ -77,8 +76,7 @@ def recommend_courses_graph(job_code: str, top_n: int = 10) -> List[Dict]:
     ORDER BY graph_score DESC
     LIMIT $top_n
     """
-    driver = get_driver()
-    with driver.session() as session:
+    with get_session() as session:
         rows = session.run(query, {"job_code": job_code, "top_n": top_n}).data()
 
     return rows
@@ -154,7 +152,6 @@ def get_job_skill_coverage(job_code: str) -> List[Dict]:
            course_ids
     ORDER BY num_courses ASC, skill_name
     """
-    driver = get_driver()
-    with driver.session() as session:
+    with get_session() as session:
         rows = session.run(query, {"job_code": job_code}).data()
     return rows

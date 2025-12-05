@@ -3,7 +3,7 @@
 import pandas as pd
 import gradio as gr
 
-from src.neo4j_client import get_driver
+from src.neo4j_client import get_session
 from src.recommend.job_to_courses import (
     recommend_courses_graph,
     recommend_courses_hybrid,
@@ -27,8 +27,7 @@ def fetch_job_options():
     RETURN j.job_code AS job_code, j.title_en AS title_en
     ORDER BY j.job_code
     """
-    driver = get_driver()
-    with driver.session() as session:
+    with get_session() as session:
         rows = session.run(query).data()
 
     options = []
@@ -50,8 +49,7 @@ def fetch_skill_options():
     RETURN DISTINCT s.name AS name
     ORDER BY name
     """
-    driver = get_driver()
-    with driver.session() as session:
+    with get_session() as session:
         rows = session.run(query).data()
 
     skills = [r["name"] for r in rows if r["name"]]
@@ -68,8 +66,7 @@ def fetch_course_options():
     RETURN c.course_id AS course_id, c.title_en AS title_en
     ORDER BY c.course_id
     """
-    driver = get_driver()
-    with driver.session() as session:
+    with get_session() as session:
         rows = session.run(query).data()
 
     options = []
@@ -79,6 +76,50 @@ def fetch_course_options():
         label = f"{cid} | {title}" if title else cid
         options.append(label)
     return options
+
+
+def fetch_no_skill_jobs_df() -> pd.DataFrame:
+    """
+    Fetch jobs that do NOT have any NEEDS->Skill relationships.
+
+    These can be interpreted as 'jobs with no mapped skills' in the
+    current KG. They might be:
+      - not processed yet by Phase 3, or
+      - processed but had no candidates above threshold.
+    In both cases, they are interesting as 'skill gap jobs'.
+    """
+    query = """
+    MATCH (j:Job)
+    WHERE NOT (j)-[:NEEDS]->(:Skill)
+    RETURN j.job_code       AS job_code,
+           j.title_en       AS title_en,
+           j.description_en AS description_en,
+           j.tasks          AS tasks
+    ORDER BY j.job_code
+    """
+    with get_session() as session:
+        rows = session.run(query).data()
+
+    if not rows:
+        return pd.DataFrame()
+
+    data = []
+    for r in rows:
+        data.append({
+            "job_code": r["job_code"],
+            "title_en": r.get("title_en") or "",
+            "description_en": r.get("description_en") or "",
+            "tasks": r.get("tasks") or "",
+        })
+    return pd.DataFrame(data)
+
+
+def run_skill_gap_jobs():
+    """
+    Gradio callback: returns a DataFrame of jobs that have
+    no NEEDS->Skill relationships.
+    """
+    return fetch_no_skill_jobs_df()
 
 
 # -----------------------------
@@ -650,6 +691,50 @@ def build_app():
                 fn=run_phase6_courses_to_jobs,
                 inputs=[phase6_courses_dropdown, phase6_topn_jobs_slider],
                 outputs=[phase6_graph_df, phase6_hybrid_df, phase6_coverage_df],
+            )
+
+        # ===========================
+        # Skill Gap Jobs: no matched skills in Phase 3
+        # ===========================
+        with gr.Tab("Skill Gap Jobs"):
+            gr.Markdown(
+                """
+                ## Skill Gap Jobs – No Matched Skills
+
+                These jobs were processed in the Job → Skills mapping step (Phase 3),
+                but **no skills passed the similarity threshold**.
+
+                That means:
+                - Our current Skills & Courses graph does not provide good coverage
+                  for these jobs.
+                - They are very interesting for **curriculum designers** and
+                  **labor market analysts**, because they may indicate:
+                    - Missing or outdated courses
+                    - Missing skill concepts in the graph
+                    - Or noisy / unusual job descriptions
+
+                You can:
+                - Export this table for expert review.
+                - Use it to prioritize new skill / course development.
+                """
+            )
+
+            skill_gap_btn = gr.Button("Load Skill Gap Jobs")
+            skill_gap_df = gr.Dataframe(
+                headers=[
+                    "job_code",
+                    "title_en",
+                    "description_en",
+                    "tasks",
+                ],
+                label="Jobs with no matched skills (skill_mapping_status = 'no_skills')",
+                interactive=False,
+            )
+
+            skill_gap_btn.click(
+                fn=run_skill_gap_jobs,
+                inputs=[],
+                outputs=[skill_gap_df],
             )
 
     return demo
